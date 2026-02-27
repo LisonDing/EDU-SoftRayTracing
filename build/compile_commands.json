@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/build",
+  "command": "/usr/bin/clang++  -I\"/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/include\" -I\"/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/external\" -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/ONERT.dir/src/main.cpp.o -c \"/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/src/main.cpp\"",
+  "file": "/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/src/main.cpp",
+  "output": "CMakeFiles/ONERT.dir/src/main.cpp.o"
+}
+]

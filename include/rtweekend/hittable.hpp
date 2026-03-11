@@ -3,6 +3,7 @@
 #pragma once
 
 #include "rtweekend/ray.hpp"
+#include "rtweekend/aabb.hpp"
 #include "rtweekend/interval.hpp"
 #include "rtweekend/vec3.hpp"
 #include <memory>
@@ -39,6 +40,9 @@ public:
     // =0是 C++ 中纯虚函数（Pure Virtual Function）的专属标志，不是给函数赋值，而是给编译器的指令。 定义借口规范同时禁止直接实例化，强制约束派生类重写基类所有纯虚函数
     // const 位于函数参数列表后即定义常量成员函数（Const Member Function），强制只读类型，即此处hit设计逻辑为纯查询操作。 const修饰的是hit 而非其参数
     virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const =0;
+
+    // 所有物体必须能返回自己的 AABB
+    virtual aabb bounding_box() const = 0;
 };
 
 

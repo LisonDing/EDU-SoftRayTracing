@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include "hittable.hpp"
+#include "rtweekend/hittable.hpp"
+#include "rtweekend/aabb.hpp"
 #include "rtweekend/interval.hpp"
 #include "rtweekend/material.hpp"
 #include "rtweekend/ray.hpp"
@@ -20,7 +21,7 @@ private:
     double radius;
 
     std::shared_ptr<material> mat;
-
+    aabb bbox;
 public:
     
     // // 记录球心和球半径
@@ -33,10 +34,20 @@ public:
 
     sphere() {}
     // Stationary Sphere
-    sphere(const point3& cen, double r ,shared_ptr<material> _mat) : center(cen,vec3(0,0,0),0.0), radius(std::fmax(0,r)) ,mat(_mat) {};
+    sphere(const point3& cen, double r ,shared_ptr<material> _mat) : center(cen,vec3(0,0,0),0.0), radius(std::fmax(0,r)) ,mat(_mat) {
+        // 提前计算包围盒，避免每次求交时重复计算
+        auto rvec = vec3(radius, radius, radius);
+        bbox = aabb(cen - rvec, cen + rvec);
+    };
     
     // Moving Sphere
-    sphere(const point3& cen1,const point3& cen2, double r ,shared_ptr<material> _mat) : center(cen1, cen2-cen1,0.0), radius(std::fmax(0,r)) ,mat(_mat) {};
+    sphere(const point3& cen1,const point3& cen2, double r ,shared_ptr<material> _mat) : center(cen1, cen2-cen1,0.0), radius(std::fmax(0,r)) ,mat(_mat) {
+        // 提前计算包围盒，避免每次求交时重复计算
+        auto rvec = vec3(radius, radius, radius);
+        aabb box0(cen1 - rvec, cen1 + rvec);
+        aabb box1(cen2 - rvec, cen2 + rvec);
+        bbox = aabb(box0, box1); // 运动球体包围盒必须包含球体在运动过程中所有位置的包围盒，即两个静止包围盒的并集
+    };
 
     virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
         // 按照直觉Origin to Center定义 相机指向球心的向量
@@ -101,6 +112,7 @@ public:
         
         return true;
     }
+aabb bounding_box() const override { return bbox; }
 // private:
 //     // 记录球心和球半径
 //     point3 center;

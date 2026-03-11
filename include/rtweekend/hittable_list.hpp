@@ -29,7 +29,11 @@ public:
     hittable_list(shared_ptr<hittable> object) { add(object); }
 
     void clear() { objects.clear(); }
-    void add(shared_ptr<hittable> object) { objects.push_back(object); }
+    void add(shared_ptr<hittable> object) { 
+        objects.push_back(object);
+        // 每次添加物体时，更新场景的包围盒
+        bbox = aabb(bbox, object->bounding_box()); // 重置包围盒
+    }
 
 
     // 求交规则
@@ -58,6 +62,12 @@ public:
 
         return hit_anything;
     }
+
+    // 返回大场景包围盒
+    aabb bounding_box() const override { return bbox; }
+
+private:
+    aabb bbox;
 };
 
 } // namespace rt

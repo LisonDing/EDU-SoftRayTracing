@@ -2,6 +2,7 @@
 
 #pragma once
 
+
 #include <cmath>
 #include <limits>
 #include <memory>
@@ -39,6 +40,11 @@ inline double random_double() {
 // 重载线性映射生成 [min, max) 区间的均匀随机数
 inline double random_double(double min, double max) {
     return min + (max - min) * random_double();
+}
+
+// Return a random integer in [min, max]
+inline int random_int (int min, int max) {
+    return int (random_double(min, max+1)); // 注意：上界为 max+1 因为 random_double 是左闭右开区间
 }
 
 // Common Headers

@@ -1010,9 +1010,11 @@ CMakeFiles/ONERT.dir/src/main.cpp.o: \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/interval.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/ray.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/hittable.hpp \
+  /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/aabb.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/hittable_list.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/sphere.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/material.hpp \
+  /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/BVH.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/camera.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/external/stb/stb_image_write.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/assert.h \

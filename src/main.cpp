@@ -1,4 +1,4 @@
-// #include "rtweekend/vec3.hpp"
+
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -11,6 +11,8 @@
 #include <rtweekend/hittable_list.hpp>
 
 #include <rtweekend/sphere.hpp>
+
+#include <rtweekend/BVH.hpp>
 
 #include <rtweekend/camera.hpp>
 
@@ -162,6 +164,9 @@ int main() {
     auto material3 = make_shared<rt::metal>(rt::color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<rt::sphere>(rt::point3(4, 1, 0), 1.0, material3));
 
+    // 将线性list置入BVH节点树 以加速求交
+    world = rt::hittable_list(make_shared<rt::bvh_node>(world));
+
     rt::camera cam;
 
     cam.aspect_ratio      = 16.0 / 9.0;
@@ -184,7 +189,7 @@ int main() {
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_motionBlur_11.png");
+    cam.render(world,"NRT_image_BVH_12.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

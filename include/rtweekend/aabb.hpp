@@ -1,3 +1,5 @@
+// 基础轴对齐包围盒 (AABB) 类定义
+
 #pragma once
 
 #include "rtweekend.hpp"

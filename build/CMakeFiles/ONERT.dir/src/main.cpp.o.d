@@ -1014,6 +1014,7 @@ CMakeFiles/ONERT.dir/src/main.cpp.o: \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/hittable_list.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/sphere.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/material.hpp \
+  /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/texture.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/BVH.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/include/rtweekend/camera.hpp \
   /Users/admin/Desktop/CG/Render/Soft\ RayTracing/OneRT/external/stb/stb_image_write.h \

@@ -16,6 +16,11 @@ struct hit_record {
     point3 p;
     vec3 normal;
     double t;
+
+    // UV纹理坐标
+    double u;
+    double v;
+
     bool front_face; // true 从外部 反之 内部
 
     // 指向类的智能指针，编译器不需要知道类的详细信息，从而解决循环引用的问题

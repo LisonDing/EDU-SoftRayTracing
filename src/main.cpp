@@ -18,6 +18,8 @@
 
 #include <rtweekend/material.hpp>
 
+#include <rtweekend/texture.hpp>
+
 
 
 
@@ -116,8 +118,12 @@ int main() {
 
     // 场景3 cover
     // 地面球体
-    auto ground_material = make_shared<rt::lambertian>(rt::color(0.5, 0.5, 0.5));
-    world.add(make_shared<rt::sphere>(rt::point3(0,-1000,0), 1000, ground_material));
+    // auto ground_material = make_shared<rt::lambertian>(rt::color(0.5, 0.5, 0.5));
+    // world.add(make_shared<rt::sphere>(rt::point3(0,-1000,0), 1000, ground_material));
+
+    // 场景4 棋盘格
+    auto checker = make_shared<rt::checkerboard>(0.32, rt::color(0.2, 0.3, 0.1), rt::color(0.9, 0.9, 0.9));
+    world.add(make_shared<rt::sphere>(rt::point3(0,-1000,0), 1000, make_shared<rt::lambertian>(checker)));
 
     // 双层循环矩阵 21x21
     for (int a = -11; a < 11; a++) {
@@ -189,7 +195,7 @@ int main() {
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_BVH_12.png");
+    cam.render(world,"NRT_image_TextureMapping_13.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

@@ -2,7 +2,9 @@
 
 #include "rtweekend/hittable.hpp"
 #include "rtweekend/ray.hpp"
+#include "rtweekend/rtweekend.hpp"
 #include "rtweekend/vec3.hpp"
+#include "rtweekend/texture.hpp"
 #include <cmath>
 
 namespace rt {
@@ -25,24 +27,44 @@ public:
 };
 
 class lambertian : public material {
+// public:
+//     color albedo;
+//     // 引入反照率 albedo 定义物体的反射比率
+//     lambertian(const color& albedo) : albedo(albedo) {}
+
+//     bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+//     const override {
+//         auto scatter_direction = rec.normal + random_in_unit_sphere();
+
+//         // Catch degenerate scatter direction
+//         // 边缘情况处理：如果随机向量刚好和法线相反，相加会变成零向量
+//         if (scatter_direction.near_zero())
+//             scatter_direction = rec.normal;
+
+//         scattered = ray(rec.p,scatter_direction,r_in.time());
+//         attenuation = albedo;
+//         return true;
+//     }
+// };
 public:
-    color albedo;
-    // 引入反照率 albedo 定义物体的反射比率
-    lambertian(const color& albedo) : albedo(albedo) {}
+    lambertian(const color& albedo) : tex(make_shared<solid_color>(albedo)) {}
+    lambertian(shared_ptr<texture> tex) : tex(tex) {}
 
     bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
     const override {
+        // Implementation for Lambertian scattering
         auto scatter_direction = rec.normal + random_in_unit_sphere();
 
         // Catch degenerate scatter direction
-        // 边缘情况处理：如果随机向量刚好和法线相反，相加会变成零向量
         if (scatter_direction.near_zero())
             scatter_direction = rec.normal;
 
-        scattered = ray(rec.p,scatter_direction,r_in.time());
-        attenuation = albedo;
+        scattered = ray(rec.p, scatter_direction, r_in.time());
+        attenuation = tex->value(rec.u, rec.v, rec.p);
         return true;
     }
+private:
+    shared_ptr<texture> tex; // 反照率纹理，可以是纯色或更复杂的纹理
 };
 
 class metal : public material {

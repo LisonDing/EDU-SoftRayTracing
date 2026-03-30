@@ -83,8 +83,9 @@
 //     return (1.0 - sky_t) * rt::color(1.0, 1.0, 1.0) + sky_t * rt::color(0.5, 0.7, 1.0);
 // }
 
-int main() {
-    
+// 简单的switch场景选择
+rt::hittable_list bouncing_spheres() {
+
     // world
     rt::hittable_list world;
     // // 中心小球
@@ -170,10 +171,51 @@ int main() {
     auto material3 = make_shared<rt::metal>(rt::color(0.7, 0.6, 0.5), 0.0);
     world.add(make_shared<rt::sphere>(rt::point3(4, 1, 0), 1.0, material3));
 
+    return world;
+}
+
+
+rt::hittable_list checkered_spheres() {
+    // world
+    rt::hittable_list world;
+
+    auto checker = make_shared<rt::checkerboard>(0.32, rt::color(0.2, 0.3, 0.1), rt::color(0.9, 0.9, 0.9));
+    world.add(make_shared<rt::sphere>(rt::point3(0,-10, 0), 10, make_shared<rt::lambertian>(checker)));
+    world.add(make_shared<rt::sphere>(rt::point3(0,10, 0), 10, make_shared<rt::lambertian>(checker)));
+
+    // rt::camera cam;
+
+    return world;
+
+ 
+}
+
+int main () {
+    // 1. 初始化空的世界和相机
+    rt::hittable_list world;
+    rt::camera cam;
+    // 2. 场景选择
+    int switch_sence = 2;
+    switch (switch_sence) {
+        case 1:
+            world = bouncing_spheres();
+            cam.vfov = 20;
+            // cam.lookfrom = rt::point3(-2,2,1);
+            // cam.lookat   = rt::point3(0,0,-1);
+            // cam.vup      = rt::vec3(0,1,0);
+            cam.lookfrom = rt::point3(13,2,3);
+            cam.lookat   = rt::point3(0,0,0);
+            // cam.vup      = rt::vec3(0,1,0);
+            break;  
+        case 2:
+            world = checkered_spheres();
+            cam.lookfrom = rt::point3(13, 2, 3);
+            cam.lookat   = rt::point3(0, 0, 0);
+            cam.vfov     = 20.0;
+            break;
+    }
     // 将线性list置入BVH节点树 以加速求交
     world = rt::hittable_list(make_shared<rt::bvh_node>(world));
-
-    rt::camera cam;
 
     cam.aspect_ratio      = 16.0 / 9.0;
     cam.image_width       = 400;
@@ -182,12 +224,12 @@ int main() {
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
 
-    cam.vfov = 20;
-    // cam.lookfrom = rt::point3(-2,2,1);
-    // cam.lookat   = rt::point3(0,0,-1);
-    // cam.vup      = rt::vec3(0,1,0);
-    cam.lookfrom = rt::point3(13,2,3);
-    cam.lookat   = rt::point3(0,0,0);
+    // cam.vfov = 20;
+    // // cam.lookfrom = rt::point3(-2,2,1);
+    // // cam.lookat   = rt::point3(0,0,-1);
+    // // cam.vup      = rt::vec3(0,1,0);
+    // cam.lookfrom = rt::point3(13,2,3);
+    // cam.lookat   = rt::point3(0,0,0);
     cam.vup      = rt::vec3(0,1,0);
 
     // cam.defocus_angle = 10.0;
@@ -195,7 +237,7 @@ int main() {
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_TextureMapping_13.png");
+    cam.render(world,"NRT_image_Checkerboard_14.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;
@@ -252,4 +294,5 @@ int main() {
     // // stide_bytes 行步幅：每行像素数据的字节数， 目的是告诉 stbi_write_png 每行数据的起始位置 访问对齐内存地址可以提高性能
     // stbi_write_png("image_dielectric_8.png", image_width, image_height, channel_num, data.data(), image_width * channel_num);
     // std::clog << "\nDone.\n";
+
 }

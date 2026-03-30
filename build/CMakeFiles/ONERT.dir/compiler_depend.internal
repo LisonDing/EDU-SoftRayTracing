@@ -1022,5 +1022,6 @@ CMakeFiles/ONERT.dir/src/main.cpp.o
  /Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/include/rtweekend/ray.hpp
  /Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/include/rtweekend/rtweekend.hpp
  /Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/include/rtweekend/sphere.hpp
+ /Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/include/rtweekend/texture.hpp
  /Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/include/rtweekend/vec3.hpp
 

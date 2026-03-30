@@ -1,3 +1,0 @@
-/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/build/CMakeFiles/ONERT.dir
-/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/build/CMakeFiles/edit_cache.dir
-/Users/admin/Desktop/CG/Render/Soft RayTracing/OneRT/build/CMakeFiles/rebuild_cache.dir

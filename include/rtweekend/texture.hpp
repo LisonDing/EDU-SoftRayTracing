@@ -4,7 +4,9 @@
 
 #pragma once
 #include "rtweekend.hpp"
+#include "rtweekend/vec3.hpp"
 #include <algorithm>
+#include "rtw_image.hpp"
 
 namespace rt {
 
@@ -65,4 +67,41 @@ private:
     shared_ptr<texture> odd;  // 棋盘格的第二种颜色纹理    
         
 };
+
+// image_texture 图片纹理
+// 通过加载图片文件，将图片数据作为纹理信息提供给渲染管
+class image_texture : public texture {
+public:
+    image_texture(const char* filename) : image(filename) {}
+
+    color value(double u, double v, const point3& p) const override {
+        // 如果图片没加载成功，返回一个显眼的青色作为错误提示
+        if (image.height() <= 0) return color(0, 1, 1);
+
+        // 限制 U 和 V 在 [0.0, 1.0] 范围内
+        u = interval(0,1).clamp(u);
+        v = 1.0 - interval(0,1).clamp(v);  // 图像的 Y 坐标是从上到下递增的，而 V 是从下到上递增的，所以要翻转 V
+
+        auto i = static_cast<int>(u * image.width());
+        auto j = static_cast<int>(v * image.height());
+        auto pixel = image.pixel_data(i, j);
+
+        // 将 0~255 的像素值转换回 0.0~1.0 的颜色值
+        auto color_scale = 1.0 / 255.0;
+
+        // 逆向sRGB 即将Gamma空间逆向回线性空间，得到线性空间的颜色值
+        // 1. 提取原始的 sRGB 颜色 (0.0 ~ 1.0)
+        auto r = color_scale * pixel[0];
+        auto g = color_scale * pixel[1];
+        auto b = color_scale * pixel[2];
+
+        // 工程实现使用相乘求平方根的近似方法来进行逆向sRGB转换，性能更优（因为乘法比开根号更快），且在大多数情况下视觉效果足够好
+        // return color(color_scale * pixel[0], color_scale * pixel[1], color_scale * pixel[2]);
+        return  color(r * r, g * g, b * b);
+    }
+
+private:
+    rtw_image image;
+};
+
 }

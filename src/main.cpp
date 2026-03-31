@@ -5,6 +5,7 @@
 
 // 保持 STB 实现定义在 cpp 文件中
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 
 #include <rtweekend/rtweekend.hpp>
 
@@ -190,12 +191,22 @@ rt::hittable_list checkered_spheres() {
  
 }
 
+rt::hittable_list earth() {
+    rt::hittable_list world;
+
+    auto earth_texture = make_shared<rt::image_texture>("earthmap.jpg");
+    auto earth_surface = make_shared<rt::lambertian>(earth_texture);
+    world.add(make_shared<rt::sphere>(rt::point3(0,0,0), 2, earth_surface));
+
+    return world;
+}
+
 int main () {
     // 1. 初始化空的世界和相机
     rt::hittable_list world;
     rt::camera cam;
     // 2. 场景选择
-    int switch_sence = 2;
+    int switch_sence = 3;
     switch (switch_sence) {
         case 1:
             world = bouncing_spheres();
@@ -210,6 +221,12 @@ int main () {
         case 2:
             world = checkered_spheres();
             cam.lookfrom = rt::point3(13, 2, 3);
+            cam.lookat   = rt::point3(0, 0, 0);
+            cam.vfov     = 20.0;
+            break;
+        case 3:
+            world = earth();
+            cam.lookfrom = rt::point3(0, 0, 12);
             cam.lookat   = rt::point3(0, 0, 0);
             cam.vfov     = 20.0;
             break;
@@ -237,7 +254,7 @@ int main () {
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_Checkerboard_14.png");
+    cam.render(world,"NRT_image_earthmap_15.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

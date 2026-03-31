@@ -22,6 +22,18 @@ private:
 
     std::shared_ptr<material> mat;
     aabb bbox;
+
+    // 计算球体uv坐标
+    static void get_sphere_uv(const vec3& p, double& u, double& v) {
+        // p: 球面上点的坐标 表示从球心指向球面上点的单位向量 unit_vector(p - center)
+        // atan2 返回值在[-pi, pi] 之间 
+        // asin 返回值在[-pi/2, pi/2] 之间
+        auto theta = std::acos(-p.y); // polar angle θ 从y轴向下测量。 -p为对其图形学默认的y轴正向向下的坐标系的适配
+        auto phi = std::atan2(-p.z, p.x) + pi; // azimuthal angle φ 从x轴正向开始逆时针测量。 此处的-p 实际作用是相机对齐子午线的操作，此处指向太平洋
+        u = phi / (2 * pi); // 将 φ 映射到 [0, 1]
+        v = theta / pi; // 将 θ 映射到 [0, 1]
+    }
+
 public:
     
     // // 记录球心和球半径
@@ -108,6 +120,9 @@ public:
         // vec3 outward_normal = (rec.p - center) / radius;  // 交点处法线单位向量（球心指向交点向量）/球半径 
         vec3 outward_normal = (rec.p - current_center) / radius;
         rec.set_face_normal(r, outward_normal); // 法向量修正
+
+        get_sphere_uv(outward_normal, rec.u, rec.v); // 计算球面UV坐标
+        
         rec.mat = mat;
         
         return true;

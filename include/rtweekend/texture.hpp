@@ -7,6 +7,7 @@
 #include "rtweekend/vec3.hpp"
 #include <algorithm>
 #include "rtw_image.hpp"
+#include "perlin.hpp"
 
 namespace rt {
 
@@ -104,4 +105,25 @@ private:
     rtw_image image;
 };
 
+// 其他纹理类型（比如噪声纹理、程序纹理）可以在此基础上继续扩展实现
+class noise_texture : public texture {
+public:
+    noise_texture() {}
+    // 我们可以加一个缩放系数，让噪声变密或变疏
+    noise_texture(double sc) : scale(sc) {}
+    color value(double u, double v, const point3& p) const override {
+        // 这里我们简单地使用 Perlin 噪声函数来生成纹理颜色，实际应用中可以根据需要调整噪声的频率、振幅等参数
+        // return color(1,1,1) * noise.noise(scale * p); // 将噪声值映射到白色调
+        // 把 [-1, 1] 的噪声值映射到 [0, 1]：先 +1 变成 [0, 2]，再 * 0.5 变成 [0, 1]
+        // return color(1,1,1) * (noise.noise(scale * p) + 1.0) * 0.5;
+       
+        // 通过增加频率和振幅叠加多个噪声层，形成更复杂的分形噪声（Fractal Noise）
+        // return color(1,1,1) * noise.turb(p, 7);
+        // 大理石 (Marble) 通过在分形噪声的基础上增加一个周期性的正弦函数，形成类似大理石纹理的效果
+        return color(.5, .5, .5) * (1 + std::sin(scale * p.z + 10 * noise.turb(p, 7)));
+    }
+private:
+    perlin noise;
+    double scale = 1.0;
+};
 }

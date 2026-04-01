@@ -1,5 +1,5 @@
 # CMake 产物
-build/
+/build/
 !/build/**/*.png
 
 # 编辑器/LSP 缓存

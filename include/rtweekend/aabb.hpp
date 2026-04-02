@@ -17,7 +17,9 @@ public:
 
     // 构造函数接受三个轴向的区间
     aabb(const interval& ix, const interval& iy, const interval& iz)
-      : x(ix), y(iy), z(iz) {}
+      : x(ix), y(iy), z(iz) {
+        pad_to_minimums();
+      }
 
     // 从两个点构造包围盒，自动判断最小最大坐标
     aabb(const point3& a, const point3& b) {
@@ -27,6 +29,8 @@ public:
         x = (a[0] <= b[0]) ? interval(a[0], b[0]) : interval(b[0], a[0]);
         y = (a[1] <= b[1]) ? interval(a[1], b[1]) : interval(b[1], a[1]);
         z = (a[2] <= b[2]) ? interval(a[2], b[2]) : interval(b[2], a[2]);
+
+        pad_to_minimums(); // 确保包围盒在每个轴上都有非零宽度，避免后续BVH构造和求交测试中的问题
     }
     
     // 通过两个现有的 AABB 构造一个更大的 AABB（用于合并节点）
@@ -34,6 +38,8 @@ public:
         x = interval(box0.x, box1.x);
         y = interval(box0.y, box1.y);
         z = interval(box0.z, box1.z);
+
+        pad_to_minimums(); // 确保包围盒在每个轴上都有非零宽度，避免后续BVH构造和求交测试中的问题
     }
     
     const interval& axis(int n) const {
@@ -73,6 +79,18 @@ public:
     }
 
     static const aabb empty, universe;
+
+private:
+
+    void pad_to_minimums() {
+        // Pad the bounding box to ensure it has nonzero width in all dimensions, which is important for BVH construction and ray intersection tests.
+
+        auto delta = 0.0001; // A small padding value
+        if (x.size() < delta) x = x.expand(delta);
+        if (y.size() < delta) y = y.expand(delta);
+        if (z.size() < delta) z = z.expand(delta);
+        
+    }
 };
 const aabb aabb::empty(interval::empty, interval::empty, interval::empty);
 const aabb aabb::universe(interval::universe, interval::universe, interval::universe);

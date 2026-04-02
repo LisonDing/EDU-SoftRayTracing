@@ -21,6 +21,8 @@
 
 #include <rtweekend/texture.hpp>
 
+#include <rtweekend/quad.hpp>
+
 
 
 
@@ -210,13 +212,97 @@ rt::hittable_list perlin_spheres() {
     world.add(make_shared<rt::sphere>(rt::point3(0,2,0), 2, noise_mat));
     return world;
 }
+rt::hittable_list quads() {
+    rt::hittable_list world;
+
+    // 各种不同颜色的纯色材质
+    auto left_red     = make_shared<rt::lambertian>(rt::color(1.0, 0.2, 0.2));
+    auto back_green   = make_shared<rt::lambertian>(rt::color(0.2, 1.0, 0.2));
+    auto right_blue   = make_shared<rt::lambertian>(rt::color(0.2, 0.2, 1.0));
+    auto upper_orange = make_shared<rt::lambertian>(rt::color(1.0, 0.5, 0.0));
+    auto lower_teal   = make_shared<rt::lambertian>(rt::color(0.2, 0.8, 0.8));
+
+    // 创建五个分布在空间不同位置和朝向的四边形
+    world.add(make_shared<rt::quad>(rt::point3(-3,-2, 5), rt::vec3(0, 0,-4), rt::vec3(0, 4, 0), left_red));
+    world.add(make_shared<rt::quad>(rt::point3(-2,-2, 0), rt::vec3(4, 0, 0), rt::vec3(0, 4, 0), back_green));
+    world.add(make_shared<rt::quad>(rt::point3( 3,-2, 1), rt::vec3(0, 0, 4), rt::vec3(0, 4, 0), right_blue));
+    world.add(make_shared<rt::quad>(rt::point3(-2, 3, 1), rt::vec3(4, 0, 0), rt::vec3(0, 0, 4), upper_orange));
+    world.add(make_shared<rt::quad>(rt::point3(-2,-3, 5), rt::vec3(4, 0, 0), rt::vec3(0, 0,-4), lower_teal));
+
+    // // Debug: print bounding boxes of each object in the scene
+    // for (size_t i = 0; i < world.objects.size(); ++i) {
+    //     auto b = world.objects[i]->bounding_box();
+    //     std::clog << "Object " << i << " bbox x:[" << b.axis(0).min << "," << b.axis(0).max << "] "
+    //               << "y:[" << b.axis(1).min << "," << b.axis(1).max << "] "
+    //               << "z:[" << b.axis(2).min << "," << b.axis(2).max << "]\n";
+    // }
+
+    return world;
+}
+
+rt::hittable_list simple_light() {
+    rt::hittable_list world;
+
+    auto pertext = make_shared<rt::noise_texture>(4.0);
+    world.add(make_shared<rt::sphere>(rt::point3(0,-1000,0), 1000, make_shared<rt::lambertian>(pertext)));
+    world.add(make_shared<rt::sphere>(rt::point3(0,2,0), 2, make_shared<rt::lambertian>(pertext)));
+
+    auto difflight = make_shared<rt::diffuse_light>(rt::color(4,4,4));
+    world.add(make_shared<rt::quad>(rt::point3(3,1,-2), rt::vec3(2, 0,0), rt::vec3(0,2,0), difflight));
+    world.add(make_shared<rt::sphere>(rt::point3(0,7,0), 2, difflight));
+
+    return world;
+}
+
+rt::hittable_list cornell_box() {
+    rt::hittable_list world;
+
+    auto red   = make_shared<rt::lambertian>(rt::color(0.65, 0.05, 0.05));
+    auto white = make_shared<rt::lambertian>(rt::color(0.73, 0.73, 0.73));
+    auto green = make_shared<rt::lambertian>(rt::color(0.12, 0.45, 0.15));
+    auto light = make_shared<rt::diffuse_light>(rt::color(15, 15, 15));
+
+    world.add(make_shared<rt::quad>(rt::point3(555,0,0), rt::vec3(0,555,0), rt::vec3(0,0,555), green)); // left
+    world.add(make_shared<rt::quad>(rt::point3(0,0,0), rt::vec3(0,555,0), rt::vec3(0,0,555), red)); // right
+    world.add(make_shared<rt::quad>(rt::point3(343, 554, 332), rt::vec3(-130,0,0), rt::vec3(0,0,-105), light)); // light
+    world.add(make_shared<rt::quad>(rt::point3(0,0,0), rt::vec3(555,0,0), rt::vec3(0,0,555), white)); // ceiling
+    world.add(make_shared<rt::quad>(rt::point3(555,555,555), rt::vec3(-555,0,0), rt::vec3(0,0,-555), white)); // floor
+    world.add(make_shared<rt::quad>(rt::point3(0,0,555), rt::vec3(555,0,0), rt::vec3(0,555,0), white)); // back
+
+    return world;
+}
+
 
 int main () {
     // 1. 初始化空的世界和相机
     rt::hittable_list world;
     rt::camera cam;
+
+    cam.aspect_ratio      = 16.0 / 9.0;
+    cam.image_width       = 400;
+    // cam.samples_per_pixel = 100;
+    // cam.image_width       = 1200;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 50;
+
+    // default scene background color
+    cam.background        = rt::color(0,0,0);
+    
+    // Specifying the color of the background
+    // cam.background        = rt::color(0.70, 0.80, 1.00);
+
+    // cam.vfov = 20;
+    // // cam.lookfrom = rt::point3(-2,2,1);
+    // // cam.lookat   = rt::point3(0,0,-1);
+    // // cam.vup      = rt::vec3(0,1,0);
+    // cam.lookfrom = rt::point3(13,2,3);
+    // cam.lookat   = rt::point3(0,0,0);
+    cam.vup      = rt::vec3(0,1,0);
+    
+    cam.defocus_angle = 0.6;
+    cam.focus_dist    = 10.0;
     // 2. 场景选择
-    int switch_sence = 4;
+    int switch_sence = 7;
     switch (switch_sence) {
         case 1:
             world = bouncing_spheres();
@@ -246,31 +332,65 @@ int main () {
             cam.lookat   = rt::point3(0, 0, 0);
             cam.vfov     = 20.0;
             break;
+        case 5:
+            world = quads();
+            cam.aspect_ratio      = 1.0;     // 改成正方形画幅
+            cam.image_width       = 400;
+            cam.samples_per_pixel = 100;
+            cam.max_depth         = 50;
+            
+            cam.lookfrom = rt::point3(0, 0, 9); // 相机正对着 Z 轴看过去
+            cam.lookat   = rt::point3(0, 0, 0);
+            cam.vfov     = 80.0;             // 广角镜头
+            cam.defocus_angle = 0; // 关闭景深效果
+            break;
+        case 6:
+            world = simple_light();
+            cam.lookfrom = rt::point3(26,3,6);
+            cam.lookat   = rt::point3(0,2,0);
+            cam.vfov     = 20;
+
+            cam.defocus_angle = 0;
+            break;
+        case 7:
+            world = cornell_box();
+            // 经典画幅：正方形
+            cam.aspect_ratio      = 1.0;
+            cam.image_width       = 600;     // 分辨率可以稍微开高点
+            cam.samples_per_pixel = 200;     // 室内光追噪点较多，建议 200 以上采样
+            cam.max_depth         = 50;
+
+            // 相机放在 Z轴 -800 的位置，往盒子中心 (278,278,0) 看
+            cam.lookfrom = rt::point3(278, 278, -800);
+            cam.lookat   = rt::point3(278, 278, 0);
+            cam.vup      = rt::vec3(0, 1, 0);
+            cam.vfov     = 40.0;
+            break;
     }
     // 将线性list置入BVH节点树 以加速求交
     world = rt::hittable_list(make_shared<rt::bvh_node>(world));
 
-    cam.aspect_ratio      = 16.0 / 9.0;
-    cam.image_width       = 400;
+    // cam.aspect_ratio      = 16.0 / 9.0;
+    // cam.image_width       = 400;
+    // // cam.samples_per_pixel = 100;
+    // // cam.image_width       = 1200;
     // cam.samples_per_pixel = 100;
-    // cam.image_width       = 1200;
-    cam.samples_per_pixel = 100;
-    cam.max_depth         = 50;
+    // cam.max_depth         = 50;
 
-    // cam.vfov = 20;
-    // // cam.lookfrom = rt::point3(-2,2,1);
-    // // cam.lookat   = rt::point3(0,0,-1);
-    // // cam.vup      = rt::vec3(0,1,0);
-    // cam.lookfrom = rt::point3(13,2,3);
-    // cam.lookat   = rt::point3(0,0,0);
-    cam.vup      = rt::vec3(0,1,0);
+    // // cam.vfov = 20;
+    // // // cam.lookfrom = rt::point3(-2,2,1);
+    // // // cam.lookat   = rt::point3(0,0,-1);
+    // // // cam.vup      = rt::vec3(0,1,0);
+    // // cam.lookfrom = rt::point3(13,2,3);
+    // // cam.lookat   = rt::point3(0,0,0);
+    // cam.vup      = rt::vec3(0,1,0);
 
     // cam.defocus_angle = 10.0;
     // cam.focus_dist    = 3.4;
-    cam.defocus_angle = 0.6;
-    cam.focus_dist    = 10.0;
+    // cam.defocus_angle = 0.6;
+    // cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_perlinMarble_20.png");
+    cam.render(world,"NRT_image_CornellBoxS1_24.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

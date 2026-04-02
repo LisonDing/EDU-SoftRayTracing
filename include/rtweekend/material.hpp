@@ -16,6 +16,10 @@ class material {
 public:
     virtual ~material() = default;
 
+    virtual color emitted(double u, double v, const point3& p) const {
+        return color(0, 0, 0); // 默认不发光
+    }
+
     virtual bool scatter(
         // 入射光线 r_in，撞击点信息 rec
         // attenuation 衰减系数 本质是反照率，即物体吸收反射光线的比率
@@ -139,6 +143,24 @@ private:
         // Schlick Approximation 公式
         return r0 + (1-r0)*pow((1 - cosine),5);
     }
+};
+
+// diffuse_light：漫反射光源材质，直接发光，不进行散射
+class diffuse_light : public material {
+public:
+    diffuse_light(shared_ptr<texture> tex) : tex(tex) {}
+    diffuse_light(const color& emit) : tex(make_shared<solid_color>(emit)) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+        return false; // 不发生任何反射散射
+    }
+
+    color emitted(double u, double v, const point3& p) const {
+        return tex->value(u, v, p);
+    }
+
+private:
+    shared_ptr<texture> tex;
 };
 
 }

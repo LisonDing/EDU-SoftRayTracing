@@ -17,6 +17,7 @@ public:
     int image_width = 100; // renered image width in pixel count
     int samples_per_pixel = 10;  // 采样次数
     int max_depth = 10; // Maximum number of ray bounces into scene （避免无限递归，控制材质反射 / 折射的计算次数）
+    color background; // Scene
 
     double vfov = 90;  // 垂直视场角（Field of View），决定相机的 “视野宽窄”
     point3 lookfrom = point3(0,0,0);   // Point camera is looking from // 相机原点
@@ -227,41 +228,56 @@ private:
             // 弹射次数超限返回黑色
             return color(0,0,0);
 
-        // 使用t_min = 0.001 避免浮点数 
-        if (world.hit(r,interval (0.001, infinity), rec)) {
-            // 可视化法线：将区间 [-1,1] 映射到 [0,1]
-            // 0.5 该常数位表示反射系数
-            // return 0.5 * (rec.normal + rt::color(1,1,1));
+        // // 使用t_min = 0.001 避免浮点数 
+        // if (world.hit(r,interval (0.001, infinity), rec)) {
+        //     // 可视化法线：将区间 [-1,1] 映射到 [0,1]
+        //     // 0.5 该常数位表示反射系数
+        //     // return 0.5 * (rec.normal + rt::color(1,1,1));
 
-            // uniform hemispherical scattering 均匀半球散射
-            // rt::vec3 direction = rt::random_on_hemishpere(rec.normal);  // 由法线判别的有效随机光
+        //     // uniform hemispherical scattering 均匀半球散射
+        //     // rt::vec3 direction = rt::random_on_hemishpere(rec.normal);  // 由法线判别的有效随机光
 
-            // // lambertian 反射模型。 即使光线更倾向于在法向方向弹射，降低掠射角的分布概率
-            // // *单位球和法线的夹角 theta 为[0,180] 之间 所以其 点积值域为[-1，1] 当加上法线模长 其结果永远为>=0, 所以天然位于有效半球内
-            // rt::vec3 direction = rec.normal + rt::random_in_unit_sphere(); 
-            // // 此处 ray传值为 rec.p即相交点，即光线弹射的物理逻辑，p成为新的光线出发点
-            // return 0.5 * ray_color(rt::ray(rec.p, direction), world, depth -1);
+        //     // // lambertian 反射模型。 即使光线更倾向于在法向方向弹射，降低掠射角的分布概率
+        //     // // *单位球和法线的夹角 theta 为[0,180] 之间 所以其 点积值域为[-1，1] 当加上法线模长 其结果永远为>=0, 所以天然位于有效半球内
+        //     // rt::vec3 direction = rec.normal + rt::random_in_unit_sphere(); 
+        //     // // 此处 ray传值为 rec.p即相交点，即光线弹射的物理逻辑，p成为新的光线出发点
+        //     // return 0.5 * ray_color(rt::ray(rec.p, direction), world, depth -1);
 
-            ray scattered;
-            color attenuation;
-            // 调用材质的scatter方法：计算弹射光线（scattered）和颜色衰减（attenuation）
-            if (rec.mat->scatter(r, rec, attenuation, scattered))
-                return  attenuation * ray_color(scattered, world, depth - 1);
-            return color(0,0,0);
-        }
+        //     ray scattered;
+        //     color attenuation;
+        //     // 调用材质的scatter方法：计算弹射光线（scattered）和颜色衰减（attenuation）
+        //     if (!rec.mat->scatter(r, rec, attenuation, scattered))
+        //         return  attenuation * ray_color(scattered, world, depth - 1);
+        //     return color(0,0,0);
+        // }
 
-        //光线方向归一化
-        vec3 unit_direction = rt::unit_vector(r.direction());
-        // 计算 t 参数 将 y 分量映射到 [0,1]
-        auto sky_t = 0.5 * (unit_direction.y + 1.0);
-        // 线性插值混合白色和蓝色
-        return (1.0 - sky_t) * color(1.0, 1.0, 1.0) + sky_t * color(0.5, 0.7, 1.0);
-    }
+        // //光线方向归一化
+        // vec3 unit_direction = rt::unit_vector(r.direction());
+        // // 计算 t 参数 将 y 分量映射到 [0,1]
+        // auto sky_t = 0.5 * (unit_direction.y + 1.0);
+        // // 线性插值混合白色和蓝色
+        // return (1.0 - sky_t) * color(1.0, 1.0, 1.0) + sky_t * color(0.5, 0.7, 1.0);
 
+        // light source 处理：如果光线没有击中任何物体，返回背景颜色
+        if (!world.hit(r, interval(0.001, infinity), rec))
+            return background;
 
-};
+        ray scattered;
+        color attenuation;
+        color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
+
+        if (!rec.mat->scatter(r, rec, attenuation, scattered))
+            return color_from_emission;
+
+        color color_from_scatter = attenuation * ray_color(scattered, world, depth - 1);
+
+        return color_from_emission + color_from_scatter;
+    };
+
 // // 将像素坐标置中
 // inline vec3 sample_square() {
 //     return vec3(random_double() - 0.5, random_double() - 0.5, 0);
 // }
+
+};
 }

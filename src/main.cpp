@@ -25,6 +25,8 @@
 
 #include <rtweekend/transform.hpp>
 
+#include <rtweekend/constant_medium.hpp>
+
 
 
 
@@ -286,6 +288,38 @@ rt::hittable_list cornell_box() {
     return world;
 }
 
+rt::hittable_list cornell_smoke() {
+    rt::hittable_list world;
+
+    auto red   = make_shared<rt::lambertian>(rt::color(0.65, 0.05, 0.05));
+    auto white = make_shared<rt::lambertian>(rt::color(0.73, 0.73, 0.73));
+    auto green = make_shared<rt::lambertian>(rt::color(0.12, 0.45, 0.15));
+    auto light = make_shared<rt::diffuse_light>(rt::color(15, 15, 15));
+
+    world.add(make_shared<rt::quad>(rt::point3(555,0,0), rt::vec3(0,555,0), rt::vec3(0,0,555), green)); // left
+    world.add(make_shared<rt::quad>(rt::point3(0,0,0), rt::vec3(0,555,0), rt::vec3(0,0,555), red)); // right
+    world.add(make_shared<rt::quad>(rt::point3(343, 554, 332), rt::vec3(-130,0,0), rt::vec3(0,0,-105), light)); // light
+    world.add(make_shared<rt::quad>(rt::point3(0,0,0), rt::vec3(555,0,0), rt::vec3(0,0,555), white)); // ceiling
+    world.add(make_shared<rt::quad>(rt::point3(555,555,555), rt::vec3(-555,0,0), rt::vec3(0,0,-555), white)); // floor
+    world.add(make_shared<rt::quad>(rt::point3(0,0,555), rt::vec3(555,0,0), rt::vec3(0,555,0), white)); // back
+
+    // 第一团雾：较暗/黑色的烟雾 (密度 0.01)
+    shared_ptr<rt::hittable> box1 = rt::box(rt::point3(0,0,0), rt::point3(165,165,165), white);
+    box1 = make_shared<rt::rotate_y>(box1, -18);
+    box1 = make_shared<rt::translate>(box1, rt::vec3(130,0,65));
+    // --- 新增结界：把这个变成黑烟 ---
+    world.add(make_shared<rt::constant_medium>(box1, 0.01, rt::color(0,0,0)));
+
+    // 第二团雾：白色的烟雾 (密度 0.01)
+    shared_ptr<rt::hittable> box2 = rt::box(rt::point3(0,0,0), rt::point3(165,330,165), white);
+    box2 = make_shared<rt::rotate_y>(box2, 15);
+    box2 = make_shared<rt::translate>(box2, rt::vec3(265,0,295));
+    // --- 新增结界：把这个变成白烟 ---
+    world.add(make_shared<rt::constant_medium>(box2, 0.01, rt::color(1,1,1)));
+
+    return world;
+}
+
 
 int main () {
     // 1. 初始化空的世界和相机
@@ -316,7 +350,7 @@ int main () {
     cam.defocus_angle = 0.6;
     cam.focus_dist    = 10.0;
     // 2. 场景选择
-    int switch_sence = 7;
+    int switch_sence = 8;
     switch (switch_sence) {
         case 1:
             world = bouncing_spheres();
@@ -380,6 +414,20 @@ int main () {
             cam.vup      = rt::vec3(0, 1, 0);
             cam.vfov     = 40.0;
             break;
+        case 8:
+            world = cornell_smoke();
+            // 经典画幅：正方形
+            cam.aspect_ratio      = 1.0;
+            cam.image_width       = 600;     
+            cam.samples_per_pixel = 200;     
+            cam.max_depth         = 50;
+
+            // 相机放在 Z轴 -800 的位置，往盒子中心 (278,278,0) 看
+            cam.lookfrom = rt::point3(278, 278, -800);
+            cam.lookat   = rt::point3(278, 278, 0);
+            cam.vup      = rt::vec3(0, 1, 0);
+            cam.vfov     = 40.0;
+            break;
     }
     // 将线性list置入BVH节点树 以加速求交
     world = rt::hittable_list(make_shared<rt::bvh_node>(world));
@@ -404,7 +452,7 @@ int main () {
     // cam.defocus_angle = 0.6;
     // cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_Instance_26.png");
+    cam.render(world,"NRT_image_volumes_27.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

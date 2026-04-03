@@ -18,7 +18,7 @@ public:
         min = a.min <= b.min ? a.min : b.min;
         max = a.max >= b.max ? a.max : b.max;
     }
-
+    
     // 原教程的 size计算区间大小在核心流程基本没用 属于冗余设计
 
     // 闭区间判断

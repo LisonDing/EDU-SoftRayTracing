@@ -163,6 +163,24 @@ private:
     shared_ptr<texture> tex;
 };
 
+// isotropic：各向同性材质，散射方向完全随机，适用于体积散射（如雾、烟等）
+class isotropic : public material {
+public:
+    isotropic(color c) : albedo(make_shared<solid_color>(c)) {}
+    isotropic(shared_ptr<texture> a) : albedo(a) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    const override {
+        // 在雾气/烟尘内部散射时，方向是绝对随机的球形分布
+        scattered = ray(rec.p, random_in_unit_sphere(), r_in.time());
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
+        return true;
+    }
+
+private:
+    shared_ptr<texture> albedo; // 雾气的颜色
+};
+
 }
 
 

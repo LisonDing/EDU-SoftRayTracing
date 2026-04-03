@@ -4,6 +4,7 @@
 #include "hittable.hpp"
 #include "rtweekend/aabb.hpp"
 #include "rtweekend/vec3.hpp"
+#include "rtweekend/hittable_list.hpp"
 
 namespace rt {
 
@@ -94,4 +95,37 @@ private:
     double D; // 平面方程中的D参数
 
 };
+
+// 长方体生成器 (返回一个包含了 6 个 quad 的 hittable_list)
+inline shared_ptr<hittable_list> box(const point3& a, const point3& b, shared_ptr<material> mat) {
+    // 返回值是一个包裹了 6 个面的列表
+    auto sides = make_shared<hittable_list>();
+
+    // 确保算出正确的最小/最大坐标点
+    auto min = point3(std::fmin(a.x, b.x), std::fmin(a.y, b.y), std::fmin(a.z, b.z));
+    auto max = point3(std::fmax(a.x, b.x), std::fmax(a.y, b.y), std::fmax(a.z, b.z));
+
+    // 计算盒子的长、宽、高对应的三个基本向量
+    auto dx = vec3(max.x - min.x, 0, 0);
+    auto dy = vec3(0, max.y - min.y, 0);
+    auto dz = vec3(0, 0, max.z - min.z);
+
+    // 拼装 6 个面 (注意向量的朝向，利用叉乘右手定则确保法线全部朝外)
+    
+    // 正面 (Front)
+    sides->add(make_shared<quad>(point3(min.x, min.y, max.z),  dx,  dy, mat));
+    // 右面 (Right)
+    sides->add(make_shared<quad>(point3(max.x, min.y, max.z), -dz,  dy, mat));
+    // 背面 (Back)
+    sides->add(make_shared<quad>(point3(max.x, min.y, min.z), -dx,  dy, mat));
+    // 左面 (Left)
+    sides->add(make_shared<quad>(point3(min.x, min.y, min.z),  dz,  dy, mat));
+    // 顶面 (Top)
+    sides->add(make_shared<quad>(point3(min.x, max.y, max.z),  dx, -dz, mat));
+    // 底面 (Bottom)
+    sides->add(make_shared<quad>(point3(min.x, min.y, min.z),  dx,  dz, mat));
+
+    return sides;
+}
+
 }

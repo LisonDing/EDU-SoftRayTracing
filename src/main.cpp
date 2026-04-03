@@ -23,6 +23,8 @@
 
 #include <rtweekend/quad.hpp>
 
+#include <rtweekend/transform.hpp>
+
 
 
 
@@ -269,6 +271,18 @@ rt::hittable_list cornell_box() {
     world.add(make_shared<rt::quad>(rt::point3(555,555,555), rt::vec3(-555,0,0), rt::vec3(0,0,-555), white)); // floor
     world.add(make_shared<rt::quad>(rt::point3(0,0,555), rt::vec3(555,0,0), rt::vec3(0,555,0), white)); // back
 
+    // 实例化：矮盒子 (先建模型 -> 旋转 -18度 -> 平移)
+    shared_ptr<rt::hittable> box1 = rt::box(rt::point3(0,0,0), rt::point3(165,165,165), white);
+    box1 = make_shared<rt::rotate_y>(box1, -18);
+    box1 = make_shared<rt::translate>(box1, rt::vec3(130,0,65));
+    world.add(box1);
+    
+    // 实例化：高盒子 (先建模型 -> 旋转 15度 -> 平移)
+    shared_ptr<rt::hittable> box2 = rt::box(rt::point3(0,0,0), rt::point3(165,330,165), white);
+    box2 = make_shared<rt::rotate_y>(box2, 15);
+    box2 = make_shared<rt::translate>(box2, rt::vec3(265,0,295));
+    world.add(box2);
+
     return world;
 }
 
@@ -390,7 +404,7 @@ int main () {
     // cam.defocus_angle = 0.6;
     // cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_CornellBoxS1_24.png");
+    cam.render(world,"NRT_image_Instance_26.png");
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

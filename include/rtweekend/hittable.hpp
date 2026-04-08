@@ -46,6 +46,15 @@ public:
     // const 位于函数参数列表后即定义常量成员函数（Const Member Function），强制只读类型，即此处hit设计逻辑为纯查询操作。 const修饰的是hit 而非其参数
     virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const =0;
 
+    // --- 新增：给出一个起始点 o，计算朝方向 v 射线的概率密度 (PDF) ---
+    virtual double pdf_value(const point3& o, const vec3& v) const {
+        return 0.0;
+    }
+    // --- 新增：给定一个起始点 o，在物体表面随机挑选一个点，返回指向那个点的方向向量 ---
+    virtual vec3 random(const point3& o) const {
+        return vec3(1, 0, 0); // 默认返回一个无意义的向量
+    }
+    
     // 所有物体必须能返回自己的 AABB
     virtual aabb bounding_box() const = 0;
 };

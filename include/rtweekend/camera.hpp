@@ -3,9 +3,12 @@
 #pragma once
 
 #include "rtweekend.hpp"
+#include "rtweekend/interval.hpp"
 #include "rtweekend/vec3.hpp"
 #include "rtweekend/material.hpp"
+#include "rtweekend/pdf.hpp"
 // 实现置入cpp
+#include <cmath>
 #include <stb/stb_image_write.h>
 
 namespace rt {
@@ -29,7 +32,7 @@ public:
 
 
     // 封装渲染循环
-    void render(const hittable& world , const char* filename) {
+    void render(const hittable& world , const char* filename , const hittable& lights) {
         initialize();
 
         int channel_num = 3;
@@ -56,21 +59,34 @@ public:
 
                 // 抗锯齿循环
                 // 前置自增无临时对象开销
-                for (int s = 0; s < samples_per_pixel; ++s) {
-                    // // 像素中心的随机偏移
-                    // vec3 offset = sample_square();
-                    // // 计算 u,v 参数
-                    // auto u = (double(i) + offset.x) / (image_width - 1);
-                    // auto v = (double(j) + offset.y) / (image_height - 1);
+                // for (int s = 0; s < samples_per_pixel; ++s) {
+                //     // // 像素中心的随机偏移
+                //     // vec3 offset = sample_square();
+                //     // // 计算 u,v 参数
+                //     // auto u = (double(i) + offset.x) / (image_width - 1);
+                //     // auto v = (double(j) + offset.y) / (image_height - 1);
 
-                    // create ray
-                    // 即viewport任意点p点3D坐标为 基准点+空间基准轴向的位移
-                    ray r = get_ray(i,j);
+                //     // create ray
+                //     // 即viewport任意点p点3D坐标为 基准点+空间基准轴向的位移
+                //     ray r = get_ray(i,j); 
 
-                    // 计算像素颜色
-                    // 累加颜色
-                    pixel_color += ray_color(r, world, max_depth);
+                //     // 计算像素颜色
+                //     // 累加颜色
+                //     pixel_color += ray_color(r, world, max_depth);
+                // }
+
+                // 分层采样：先计算每个像素的中心点的颜色，后续再做抗锯齿
+                for (int s_j = 0; s_j < sqrt_spp; s_j++) {
+                    for (int s_i = 0; s_i < sqrt_spp; s_i++) {
+                        ray r = get_ray(i, j, s_i, s_j);
+                        pixel_color += ray_color(r, world ,max_depth, lights); // 目前先把lights参数传world，后续再单独传入光源集合
+                    }
                 }
+
+
+
+
+
                 //  调试：颜色log
                 // if (i == image_width / 2 && j == image_height - 1) {
                 //     std::cout << "Check Pixel: " << int(255.99 * pixel_color.x) << " " 
@@ -99,6 +115,10 @@ public:
 private:
     int image_height;
 
+    double pixel_samples_scale;
+    int sqrt_spp; // 每行/列的采样数（samples_per_pixel 的平方根），用于分层采样
+    double recip_sqrt_spp; // 1/sqrt_spp 的预计算值，避免在采样循环中重复计算
+
     // point3 origin;
     // point3 lower_left_corner;
     // vec3 horizontal;
@@ -118,6 +138,11 @@ private:
         // 推导图像高度
         image_height = int(image_width / aspect_ratio);
         image_height = (image_height < 1) ? 1 : image_height;
+
+        // 预计算采样相关的值，避免在采样循环中重复计算
+        sqrt_spp = int(std::sqrt(samples_per_pixel));
+        pixel_samples_scale = 1.0 / (sqrt_spp * sqrt_spp);
+        recip_sqrt_spp = 1.0 / sqrt_spp;
 
         // samples_per_pixel = 1.0 / samples_per_pixel;
 
@@ -185,10 +210,13 @@ private:
     // }
 
     // 获取射向uv的光线：生成像素对应的采样光线
-    ray get_ray(double i , double j) const {
+    ray get_ray(double i , double j, int s_i, int s_j) const {
         // Construct a camera ray originating from the defocus disk and directed at a randomly
         // 生成像素内的随机偏移，让光线指向像素内的随机位置（而非固定中心），是抗锯齿的核心
-        auto offset = sample_square();
+        // auto offset = sample_square();
+
+        auto offset = sample_square_stratified(s_i, s_j);
+
         // 视口采样点的实际位置
         auto pixel_sample = pixel00_loc
                           + ((i + offset.x) * pixel_delta_u)
@@ -220,7 +248,7 @@ private:
     }
     
     // 光线绘制接收hittable集合    
-    color ray_color(const rt::ray& r, const hittable& world, int depth) {
+    color ray_color(const rt::ray& r, const hittable& world, int depth, const hittable& lights) {
         hit_record rec;
         
         // 递归中止条件
@@ -264,16 +292,44 @@ private:
 
         ray scattered;
         color attenuation;
+        double pdf_val; // 这根光线生成的概率 p(x)，即散射概率密度函数 (PDF) 的值，后续用于平衡重要性采样的权重计算
         color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
 
-        if (!rec.mat->scatter(r, rec, attenuation, scattered))
+        if (!rec.mat->scatter(r, rec, attenuation, scattered, pdf_val))
             return color_from_emission;
 
-        color color_from_scatter = attenuation * ray_color(scattered, world, depth - 1);
+        // Mixture PDF 混合采样：将针对光源的 PDF 和余弦加权的漫反射 PDF 混合，既考虑了重要性采样（朝向光源）又保持了漫反射的随机性
+        auto p0 = make_shared<cosine_pdf>(rec.normal);
+        auto p1 = make_shared<hittable_pdf>(lights, rec.p);
+        mixture_pdf mixed_pdf(p0, p1);
+        // 用混合 PDF 生成这根次级光线的真实方向
+        scattered = ray(rec.p, mixed_pdf.generate(), r.time());
+        // 计算这个方向的真实混合概率密度
+        pdf_val = mixed_pdf.value(scattered.direction());
+
+
+        // 获取 f(x) 的几何散射部分
+        double scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
+
+        // 获取递归回来的光线颜色 L_i
+        color sample_color = ray_color(scattered, world, depth - 1, lights);
+
+        // 计算最终颜色：L_o = L_e + f(x) * L_i * p(x) / pdf_val
+        // color color_from_scatter = attenuation * ray_color(scattered, world, depth - 1);
+        color color_from_scatter = (attenuation * scattering_pdf * sample_color) / pdf_val;
 
         return color_from_emission + color_from_scatter;
     };
 
+    vec3 sample_square_stratified(int s_i, int s_j) const {
+        // Returns the vector to a random point in the square sub-pixel specified by grid
+        // indices s_i and s_j, for an idealized unit square pixel [-.5,-.5] to [+.5,+.5].
+
+        auto px = ((s_i + random_double()) * recip_sqrt_spp) - 0.5;
+        auto py = ((s_j + random_double()) * recip_sqrt_spp) - 0.5;
+
+        return vec3(px, py, 0);
+    }
 // // 将像素坐标置中
 // inline vec3 sample_square() {
 //     return vec3(random_double() - 0.5, random_double() - 0.5, 0);

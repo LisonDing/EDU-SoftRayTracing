@@ -20,13 +20,27 @@ public:
         return color(0, 0, 0); // 默认不发光
     }
 
+    // virtual bool scatter(
+    //     // 入射光线 r_in，撞击点信息 rec
+    //     // attenuation 衰减系数 本质是反照率，即物体吸收反射光线的比率
+    //     // 散射后的新光线 scattered
+    //     // 散射返回ture
+    //     const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+    // ) const =0;
+
+    // --- 修改：新增了 double& pdf 参数 ---
     virtual bool scatter(
-        // 入射光线 r_in，撞击点信息 rec
-        // attenuation 衰减系数 本质是反照率，即物体吸收反射光线的比率
-        // 散射后的新光线 scattered
-        // 散射返回ture
-        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
-    ) const =0;
+        const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, double& pdf
+    ) const {
+        return false;
+    }
+
+    // --- 新增：计算材质本身的物理散射分布值 (即分子中的一部分) ---
+    virtual double scattering_pdf(
+        const ray& r_in, const hit_record& rec, const ray& scattered
+    ) const {
+        return 0;
+    }
 
 };
 
@@ -51,10 +65,10 @@ class lambertian : public material {
 //     }
 // };
 public:
-    lambertian(const color& albedo) : tex(make_shared<solid_color>(albedo)) {}
-    lambertian(shared_ptr<texture> tex) : tex(tex) {}
+    lambertian(const color& a) : albedo(make_shared<solid_color>(a)) {}
+    lambertian(shared_ptr<texture> a) : albedo(a) {}
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, double& pdf)
     const override {
         // Implementation for Lambertian scattering
         auto scatter_direction = rec.normal + random_in_unit_sphere();
@@ -64,11 +78,26 @@ public:
             scatter_direction = rec.normal;
 
         scattered = ray(rec.p, scatter_direction, r_in.time());
-        attenuation = tex->value(rec.u, rec.v, rec.p);
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
+
+        // 计算散射概率密度函数 (PDF) 的值，Lambertian 的 PDF 是 cosθ/π，其中 θ 是散射方向与法线的夹角
+        auto cos_theta = dot(rec.normal, unit_vector(scattered.direction()));
+        pdf = cos_theta < 0 ? 0 : cos_theta / pi;
+        
         return true;
     }
+
+    double scattering_pdf(
+        const ray& r_in, const hit_record& rec, const ray& scattered
+    ) const override {
+        // 朗伯漫反射的物理散射分布也是 cos(theta) / pi
+        auto cos_theta = dot(rec.normal, unit_vector(scattered.direction()));
+        return cos_theta < 0 ? 0 : cos_theta / pi;
+    }
+
 private:
-    shared_ptr<texture> tex; // 反照率纹理，可以是纯色或更复杂的纹理
+    // shared_ptr<texture> tex; // 反照率纹理，可以是纯色或更复杂的纹理
+    shared_ptr<texture> albedo;
 };
 
 class metal : public material {
@@ -79,7 +108,7 @@ public:
 
     metal (const color& albedo,double fuzz) : albedo(albedo), fuzz(fuzz < 1 ? fuzz : 1) {}
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, double& pdf)
     const override {
         vec3 reflected = reflect(r_in.direction(), rec.normal);
 
@@ -94,6 +123,13 @@ public:
         return (dot(scattered.direction(), rec.normal) > 0);
     }
 
+    double scattering_pdf(
+        const ray& r_in, const hit_record& rec, const ray& scattered
+    ) const override {
+        // 金属材质的散射分布是各向同性的，即在所有方向上概率相等
+        return 0.5 / pi; // 假设金属的散射是均匀的
+    }
+
 };
 
 // dielectric 电介质
@@ -102,7 +138,7 @@ public:
     // 接收材质折射率
     dielectric(double refraction_index) : refraction_index(refraction_index) {}
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, double& pdf)
     const override {
         attenuation = color (1.0,1.0,1.0);
         // rec.front_face：true=光线从空气射入材质（外→内）；false=光线从材质射出到空气（内→外）
@@ -128,6 +164,7 @@ public:
             direction = refract(unit_direction, rec.normal, ri);
 
         scattered = ray(rec.p, direction,r_in.time());
+        pdf = 0.5 / pi; // 假设电介质的散射是均匀的
         return true;
     }
 private:
@@ -151,7 +188,7 @@ public:
     diffuse_light(shared_ptr<texture> tex) : tex(tex) {}
     diffuse_light(const color& emit) : tex(make_shared<solid_color>(emit)) {}
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const override {
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, double& pdf) const override {
         return false; // 不发生任何反射散射
     }
 
@@ -169,11 +206,12 @@ public:
     isotropic(color c) : albedo(make_shared<solid_color>(c)) {}
     isotropic(shared_ptr<texture> a) : albedo(a) {}
 
-    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered, double& pdf)
     const override {
         // 在雾气/烟尘内部散射时，方向是绝对随机的球形分布
         scattered = ray(rec.p, random_in_unit_sphere(), r_in.time());
         attenuation = albedo->value(rec.u, rec.v, rec.p);
+        pdf = 0.5 / pi; // 假设各向同性材质的散射是均匀的
         return true;
     }
 

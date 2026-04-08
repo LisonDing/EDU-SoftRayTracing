@@ -320,6 +320,84 @@ rt::hittable_list cornell_smoke() {
     return world;
 }
 
+// final scene with all the bells and whistles
+rt::hittable_list final_scene() {
+    rt::hittable_list boxes1;
+    auto ground = make_shared<rt::lambertian>(rt::color(0.48, 0.83, 0.53));
+
+    // 1. 生成地面：一个由大量长方体组成的 20x20 高低起伏的网格
+    int boxes_per_side = 20;
+    for (int i = 0; i < boxes_per_side; i++) {
+        for (int j = 0; j < boxes_per_side; j++) {
+            auto w = 100.0;
+            auto x0 = -1000.0 + i * w;
+            auto z0 = -1000.0 + j * w;
+            auto y0 = 0.0;
+            auto x1 = x0 + w;
+            auto y1 = random_double(1, 101); // 随机高度
+            auto z1 = z0 + w;
+
+            boxes1.add(rt::box(rt::point3(x0, y0, z0), rt::point3(x1, y1, z1), ground));
+        }
+    }
+
+    rt::hittable_list world;
+    // 使用 BVH 加速地面这堆海量的几何体！
+    world.add(make_shared<rt::bvh_node>(boxes1));
+
+    // 2. 顶部的超大面光源
+    auto light = make_shared<rt::diffuse_light>(rt::color(7, 7, 7));
+    world.add(make_shared<rt::quad>(rt::point3(123, 554, 147), rt::vec3(300, 0, 0), rt::vec3(0, 0, 265), light));
+
+    // 3. 带运动模糊的球体 (移动的橘色漫反射球)
+    auto center1 = rt::point3(400, 400, 200);
+    auto center2 = center1 + rt::vec3(30, 0, 0);
+    auto sphere_material = make_shared<rt::lambertian>(rt::color(0.7, 0.3, 0.1));
+    world.add(make_shared<rt::sphere>(center1, center2, 50, sphere_material));
+
+    // 4. 清澈的玻璃球和金属球
+    world.add(make_shared<rt::sphere>(rt::point3(260, 150, 45), 50, make_shared<rt::dielectric>(1.5)));
+    world.add(make_shared<rt::sphere>(rt::point3(0, 150, 145), 50, make_shared<rt::metal>(rt::color(0.8, 0.8, 0.9), 1.0)));
+
+    // 5. 次表面散射 (Subsurface Scattering) 魔法
+    // 做法：一个完全透明的玻璃外壳，里面装满蓝色的烟雾
+    auto boundary = make_shared<rt::sphere>(rt::point3(360, 150, 145), 70, make_shared<rt::dielectric>(1.5));
+    world.add(boundary); // 必须把外壳加进世界
+    world.add(make_shared<rt::constant_medium>(boundary, 0.2, rt::color(0.2, 0.4, 0.9)));
+
+    // 6. 全局丁达尔效应雾气
+    // 做法：用一个巨大无比的球体包裹整个场景，并在里面填充极其稀薄的白色雾气
+    boundary = make_shared<rt::sphere>(rt::point3(0, 0, 0), 5000, make_shared<rt::dielectric>(1.5));
+    world.add(make_shared<rt::constant_medium>(boundary, .0001, rt::color(1, 1, 1)));
+
+    // 7. 地球图像纹理球
+    auto emat = make_shared<rt::lambertian>(make_shared<rt::image_texture>("earthmap.jpg"));
+    world.add(make_shared<rt::sphere>(rt::point3(400, 200, 400), 100, emat));
+
+    // 8. 柏林噪声球 (大理石材质)
+    auto pertext = make_shared<rt::noise_texture>(0.2); // 根据你的 scale 可能需要微调这个参数
+    world.add(make_shared<rt::sphere>(rt::point3(220, 280, 300), 80, make_shared<rt::lambertian>(pertext)));
+
+    // 9. 一大堆堆叠在一起的小球阵列 (代替原本的碎箱子)
+    rt::hittable_list boxes2;
+    auto white = make_shared<rt::lambertian>(rt::color(.73, .73, .73));
+    int ns = 1000; // 1000 个小白球！
+    for (int j = 0; j < ns; j++) {
+        // 随机在一个 165x165x165 的空间内生成小球
+        auto random_pt = rt::point3(random_double(0, 165), random_double(0, 165), random_double(0, 165));
+        boxes2.add(make_shared<rt::sphere>(random_pt, 10, white));
+    }
+
+    // 把这 1000 个小球打包装进 BVH 树，然后整体旋转 15度，并平移到角落
+    world.add(make_shared<rt::translate>(
+        make_shared<rt::rotate_y>(
+            make_shared<rt::bvh_node>(boxes2), 15
+        ),
+        rt::vec3(-100, 270, 395)
+    ));
+
+    return world;
+}
 
 int main () {
     // 1. 初始化空的世界和相机
@@ -347,10 +425,10 @@ int main () {
     // cam.lookat   = rt::point3(0,0,0);
     cam.vup      = rt::vec3(0,1,0);
     
-    cam.defocus_angle = 0.6;
+    cam.defocus_angle = 0;
     cam.focus_dist    = 10.0;
     // 2. 场景选择
-    int switch_sence = 8;
+    int switch_sence = 7;
     switch (switch_sence) {
         case 1:
             world = bouncing_spheres();
@@ -400,12 +478,12 @@ int main () {
 
             cam.defocus_angle = 0;
             break;
-        case 7:
+        case 7: 
             world = cornell_box();
             // 经典画幅：正方形
             cam.aspect_ratio      = 1.0;
             cam.image_width       = 600;     // 分辨率可以稍微开高点
-            cam.samples_per_pixel = 200;     // 室内光追噪点较多，建议 200 以上采样
+            cam.samples_per_pixel = 100;     // 室内光追噪点较多，建议 200 以上采样
             cam.max_depth         = 50;
 
             // 相机放在 Z轴 -800 的位置，往盒子中心 (278,278,0) 看
@@ -413,7 +491,9 @@ int main () {
             cam.lookat   = rt::point3(278, 278, 0);
             cam.vup      = rt::vec3(0, 1, 0);
             cam.vfov     = 40.0;
+            
             break;
+        
         case 8:
             world = cornell_smoke();
             // 经典画幅：正方形
@@ -428,10 +508,28 @@ int main () {
             cam.vup      = rt::vec3(0, 1, 0);
             cam.vfov     = 40.0;
             break;
+        case 9:
+            world = final_scene();
+            // 经典画幅：正方形
+            cam.aspect_ratio      = 1.0;
+            cam.image_width       = 400;
+            cam.samples_per_pixel = 1000;
+            cam.max_depth         = 40;
+
+            cam.defocus_angle = 0;
+
+            // 相机放在 Z轴 -800 的位置，往盒子中心 (278,278,0) 看
+            cam.lookfrom = rt::point3(478, 278, -600);
+            cam.lookat   = rt::point3(278, 278, 0);
+            cam.vup      = rt::vec3(0, 1, 0);
+            cam.vfov     = 40.0;
+            break;
     }
     // 将线性list置入BVH节点树 以加速求交
     world = rt::hittable_list(make_shared<rt::bvh_node>(world));
 
+    rt::hittable_list lights;
+    lights.add(make_shared<rt::quad>(rt::point3(343, 554, 332), rt::vec3(-130,0,0), rt::vec3(0,0,-105), make_shared<rt::diffuse_light>(rt::color(15, 15, 15))));    
     // cam.aspect_ratio      = 16.0 / 9.0;
     // cam.image_width       = 400;
     // // cam.samples_per_pixel = 100;
@@ -452,7 +550,7 @@ int main () {
     // cam.defocus_angle = 0.6;
     // cam.focus_dist    = 10.0;
 
-    cam.render(world,"NRT_image_volumes_27.png");
+    cam.render(world,"Rest_image_refactored31.png", lights);
     // // rt::camera cam(aspect_ratio);
     // // // 采样次数
     // // const int samples_per_pixel = 50;

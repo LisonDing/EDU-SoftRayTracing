@@ -3,6 +3,7 @@
 #include "rtweekend.hpp"
 #include "hittable.hpp"
 #include "rtweekend/aabb.hpp"
+#include "rtweekend/ray.hpp"
 #include "rtweekend/vec3.hpp"
 #include "rtweekend/hittable_list.hpp"
 
@@ -22,7 +23,8 @@ public:
         // 3. 计算 w 向量，用于极其快速地求解交点是否在四边形内部
         w = n / dot(n, n);
 
-
+        area = n.length();
+        
         set_bounding_box();
     }
 
@@ -85,6 +87,26 @@ public:
         return true;
     }
 
+    // 1. 在四边形面上随机挑一个点，返回从 origin 指向那个点的方向
+    vec3 random(const point3& origin) const override {
+        // 利用平面向量 u 和 v，加上两个 [0,1] 的随机数，就能在平行四边形内随机漫步！
+        auto p = Q + (random_double() * u) + (random_double() * v);
+        return p - origin; 
+    }
+    // 2. 如果我们朝着方向 v 射出一根光线，它打中这个四边形的概率密度是多少？
+    double pdf_value(const point3& origin, const vec3& direction) const override {
+        hit_record rec;
+        // 先测试这根光线到底能不能打中这个四边形
+        if (!this->hit(ray(origin, direction, 0.0), interval(0.001, infinity), rec))
+            return 0;
+
+        auto distance_squared = rec.t * rec.t * direction.length_squared();
+        auto cosine = std::fabs(dot(direction, rec.normal) / direction.length());
+
+        // 核心数学：将面积上的概率转换成立体角上的概率
+        return distance_squared / (cosine * area);
+    }
+
 private:
     point3 Q; // 四边形的一个顶点
     vec3 u, v;   // 四边形的两个边向量
@@ -93,6 +115,7 @@ private:
     aabb bbox; // 四边形的包围盒
     vec3 normal; // 四边形的法线
     double D; // 平面方程中的D参数
+    double area; // 四边形的面积
 
 };
 

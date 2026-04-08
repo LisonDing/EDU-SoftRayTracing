@@ -62,7 +62,22 @@ public:
 
         return hit_anything;
     }
+    // 1. 获取光线击中列表中物体的概率平均值
+    double pdf_value(const point3& o, const vec3& v) const override {
+        auto weight = 1.0 / objects.size();
+        auto sum = 0.0;
 
+        for (const auto& object : objects)
+            sum += weight * object->pdf_value(o, v);
+
+        return sum;
+    }
+
+    // 2. 随机挑选列表中的一个物体，并在它表面生成随机向量
+    vec3 random(const point3& o) const override {
+        auto int_size = int(objects.size());
+        return objects[random_int(0, int_size - 1)]->random(o);
+    }
     // 返回大场景包围盒
     aabb bounding_box() const override { return bbox; }
 
